@@ -1,0 +1,1697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Asset Trading Bot - BTC/SOL Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #141414;
+            --bg-card: #1a1a1a;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+            --btc-color: #f7931a;
+            --sol-color: #14f195;
+            --success: #4ade80;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --border: #2a2a2a;
+            --btc-gradient: linear-gradient(135deg, #f7931a 0%, #ff6b00 100%);
+            --sol-gradient: linear-gradient(135deg, #14f195 0%, #00d4ff 100%);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        /* Background Animation */
+        .bg-pattern {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            opacity: 0.03;
+            background-image: 
+                radial-gradient(circle at 20% 50%, var(--btc-color) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, var(--sol-color) 0%, transparent 50%),
+                radial-gradient(circle at 40% 20%, var(--btc-color) 0%, transparent 50%);
+            animation: bgMove 20s ease-in-out infinite;
+        }
+
+        @keyframes bgMove {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            33% { transform: translate(-20px, -20px) rotate(120deg); }
+            66% { transform: translate(20px, -10px) rotate(240deg); }
+        }
+
+        /* Header */
+        .header {
+            background: var(--bg-secondary);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            padding: 1.5rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo-icon {
+            width: 50px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--btc-color) 0%, var(--sol-color) 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1rem;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .price-display {
+            display: flex;
+            gap: 1.5rem;
+        }
+
+        .asset-price {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: var(--bg-card);
+            padding: 0.75rem 1.25rem;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .price-value {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .btc-price .price-value {
+            color: var(--btc-color);
+        }
+
+        .sol-price .price-value {
+            color: var(--sol-color);
+        }
+
+        .price-change {
+            font-size: 0.85rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            font-weight: 500;
+        }
+
+        .price-up {
+            background: rgba(74, 222, 128, 0.1);
+            color: var(--success);
+        }
+
+        .price-down {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Asset Tabs */
+        .asset-tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1rem;
+        }
+
+        .asset-tab {
+            padding: 0.75rem 2rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 10px 10px 0 0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .asset-tab.active {
+            border-bottom: 2px solid transparent;
+        }
+
+        .asset-tab.btc-tab.active {
+            border-bottom-color: var(--btc-color);
+            background: rgba(247, 147, 26, 0.1);
+        }
+
+        .asset-tab.sol-tab.active {
+            border-bottom-color: var(--sol-color);
+            background: rgba(20, 241, 149, 0.1);
+        }
+
+        .asset-icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+        }
+
+        .btc-icon {
+            background: var(--btc-gradient);
+        }
+
+        .sol-icon {
+            background: var(--sol-gradient);
+        }
+
+        /* Asset Sections */
+        .asset-section {
+            display: none;
+        }
+
+        .asset-section.active {
+            display: block;
+        }
+
+        /* Performance Cards Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .metric-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .btc-section .metric-card:hover {
+            border-color: var(--btc-color);
+            box-shadow: 0 10px 30px rgba(247, 147, 26, 0.1);
+        }
+
+        .sol-section .metric-card:hover {
+            border-color: var(--sol-color);
+            box-shadow: 0 10px 30px rgba(20, 241, 149, 0.1);
+        }
+
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+
+        .btc-section .metric-card::before {
+            background: var(--btc-gradient);
+        }
+
+        .sol-section .metric-card::before {
+            background: var(--sol-gradient);
+        }
+
+        .metric-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .metric-label {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .btc-section .metric-value {
+            background: var(--btc-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .sol-section .metric-value {
+            background: var(--sol-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .metric-change {
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        /* Overall Stats */
+        .overall-stats {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 3rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        /* Positions Section */
+        .section {
+            margin-bottom: 3rem;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .section-title {
+            font-size: 1.75rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .btc-badge {
+            background: var(--btc-gradient);
+            color: var(--bg-primary);
+        }
+
+        .sol-badge {
+            background: var(--sol-gradient);
+            color: var(--bg-primary);
+        }
+
+        /* Position Cards */
+        .positions-grid {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .position-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .position-card:hover {
+            transform: translateX(4px);
+        }
+
+        .btc-position:hover {
+            border-color: var(--btc-color);
+            box-shadow: -10px 0 30px rgba(247, 147, 26, 0.1);
+        }
+
+        .sol-position:hover {
+            border-color: var(--sol-color);
+            box-shadow: -10px 0 30px rgba(20, 241, 149, 0.1);
+        }
+
+        .position-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1.5rem;
+        }
+
+        .position-id {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .btc-position .position-id {
+            color: var(--btc-color);
+        }
+
+        .sol-position .position-id {
+            color: var(--sol-color);
+        }
+
+        .position-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .position-metric {
+            background: var(--bg-secondary);
+            padding: 1rem;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+        }
+
+        /* Profit Progress Bar */
+        .profit-progress {
+            margin-top: 1.5rem;
+        }
+
+        .progress-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: var(--bg-secondary);
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            transition: width 0.5s ease;
+            position: relative;
+        }
+
+        .btc-position .progress-fill {
+            background: var(--btc-gradient);
+        }
+
+        .sol-position .progress-fill {
+            background: var(--sol-gradient);
+        }
+
+        .progress-markers {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 100%;
+            display: flex;
+        }
+
+        .progress-marker {
+            flex: 1;
+            border-right: 2px solid var(--bg-card);
+            position: relative;
+        }
+
+        .progress-marker:last-child {
+            border-right: none;
+        }
+
+        .profit-levels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 0.5rem;
+        }
+
+        .profit-level {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .profit-level.hit {
+            color: var(--success);
+            font-weight: 600;
+        }
+
+        .profit-level.hit::before {
+            content: '✓ ';
+        }
+
+        /* Stop Loss Indicator */
+        .stop-loss-indicator {
+            margin-top: 1rem;
+            padding: 0.5rem 1rem;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 8px;
+            font-size: 0.85rem;
+            color: var(--danger);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Technical Indicators */
+        .indicators-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .indicator-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.5rem;
+        }
+
+        .indicator-value {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin: 0.5rem 0;
+        }
+
+        .indicator-bar {
+            height: 6px;
+            background: var(--bg-secondary);
+            border-radius: 3px;
+            margin-top: 1rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .indicator-fill {
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+
+        .btc-section .indicator-fill {
+            background: var(--btc-gradient);
+        }
+
+        .sol-section .indicator-fill {
+            background: var(--sol-gradient);
+        }
+
+        /* Status Pills */
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .status-active {
+            background: rgba(74, 222, 128, 0.1);
+            color: var(--success);
+            border: 1px solid rgba(74, 222, 128, 0.3);
+        }
+
+        .status-pending {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        /* Live Indicator */
+        .live-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--success);
+        }
+
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--success);
+            border-radius: 50%;
+            animation: livePulse 2s ease-in-out infinite;
+        }
+
+        @keyframes livePulse {
+            0%, 100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.5;
+                transform: scale(1.5);
+            }
+        }
+
+        /* Settings Styles */
+        .setting-group {
+            margin-bottom: 1rem;
+        }
+
+        .setting-group label {
+            display: block;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .setting-group input[type="number"] {
+            width: 100%;
+            padding: 0.75rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .setting-group input[type="number"]:focus {
+            outline: none;
+            border-color: var(--btc-color);
+            box-shadow: 0 0 0 2px rgba(247, 147, 26, 0.1);
+        }
+
+        .setting-group input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        #settingsMessage {
+            text-align: center;
+            font-weight: 600;
+        }
+
+        #settingsMessage.success {
+            background: rgba(74, 222, 128, 0.1);
+            color: var(--success);
+            border: 1px solid rgba(74, 222, 128, 0.3);
+        }
+
+        #settingsMessage.error {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .price-display {
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+
+            .container {
+                padding: 1rem;
+            }
+
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .position-metrics {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Loading Animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid var(--border);
+            border-radius: 50%;
+            border-top-color: var(--success);
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-pattern"></div>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-icon">₿⚡</div>
+                <div>
+                    <h1 style="font-size: 1.5rem; font-weight: 700;">Multi-Asset Bot</h1>
+                    <div class="live-indicator">
+                        <div class="live-dot"></div>
+                        <span>Live Trading</span>
+                    </div>
+                </div>
+            </div>
+            <div class="price-display">
+                <div class="asset-price btc-price">
+                    <div>
+                        <div style="font-size: 0.75rem; color: var(--text-secondary);">BTC/USD</div>
+                        <div class="price-value" id="btcPrice">$104,567</div>
+                    </div>
+                    <div class="price-change price-up" id="btcChange">+2.34%</div>
+                </div>
+                <div class="asset-price sol-price">
+                    <div>
+                        <div style="font-size: 0.75rem; color: var(--text-secondary);">SOL/USD</div>
+                        <div class="price-value" id="solPrice">$187.45</div>
+                    </div>
+                    <div class="price-change price-down" id="solChange">-1.23%</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Overall Stats -->
+        <div class="overall-stats">
+            <div class="stat-item">
+                <div class="stat-label">Total Trades</div>
+                <div class="stat-value" id="totalTrades">0</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Daily P&L</div>
+                <div class="stat-value" id="dailyPnl" style="color: var(--success);">+$0.00</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">USD Balance</div>
+                <div class="stat-value" id="usdBalance">$0.00</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Runtime</div>
+                <div class="stat-value" id="runtime">0:00:00</div>
+            </div>
+        </div>
+
+        <!-- Asset Tabs -->
+        <div class="asset-tabs">
+            <div class="asset-tab btc-tab active" onclick="switchAsset('btc')">
+                <div class="asset-icon btc-icon"></div>
+                <span>Bitcoin (BTC)</span>
+            </div>
+            <div class="asset-tab sol-tab" onclick="switchAsset('sol')">
+                <div class="asset-icon sol-icon"></div>
+                <span>Solana (SOL)</span>
+            </div>
+            <div class="asset-tab settings-tab" onclick="switchAsset('settings')" style="margin-left: auto;">
+                <span>⚙️ Settings</span>
+            </div>
+        </div>
+
+        <!-- BTC Section -->
+        <div class="asset-section btc-section active">
+            <!-- BTC Performance Metrics -->
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-label">BTC Accumulated</div>
+                    <div class="metric-value" id="btcAccumulated">+0.000000</div>
+                    <div class="metric-change" style="color: var(--success);">
+                        <span>↑</span>
+                        <span>Above target</span>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Success Rate</div>
+                    <div class="metric-value" id="btcSuccessRate">0.0%</div>
+                    <div class="metric-change" style="color: var(--text-secondary);">
+                        <span>→</span>
+                        <span id="btcTradeCount">0 trades</span>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Current Exposure</div>
+                    <div class="metric-value" id="btcExposure">$0</div>
+                    <div class="metric-change" style="color: var(--warning);">
+                        <span>→</span>
+                        <span id="btcExposurePct">0% of allocation</span>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Active Positions</div>
+                    <div class="metric-value" id="btcPositionCount">0</div>
+                    <div class="metric-change" style="color: var(--text-secondary);">
+                        <span>→</span>
+                        <span id="btcMaxPositions">Max: 5</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BTC Positions -->
+            <section class="section">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        BTC Positions
+                        <span class="badge btc-badge" id="btcPositionBadge">0</span>
+                    </h2>
+                    <div class="status-pill status-active">
+                        <div class="loading"></div>
+                        <span>Auto-updating</span>
+                    </div>
+                    <button onclick="dashboard.updateAll()" style="padding: 0.5rem 1rem; background: var(--sol-gradient); border: none; border-radius: 8px; color: white; cursor: pointer;">
+                        Refresh Now
+                    </button>
+                    <button onclick="dashboard.updateAll()" style="padding: 0.5rem 1rem; background: var(--btc-gradient); border: none; border-radius: 8px; color: white; cursor: pointer;">
+                        Refresh Now
+                    </button>
+                </div>
+
+                <div class="positions-grid" id="btcPositionsGrid">
+                    <!-- BTC positions will be inserted here -->
+                </div>
+            </section>
+
+            <!-- BTC Technical Indicators -->
+            <section class="section">
+                <div class="section-header">
+                    <h2 class="section-title">BTC Technical Indicators</h2>
+                </div>
+
+                <div class="indicators-grid" id="btcIndicators">
+                    <!-- BTC indicators will be inserted here -->
+                </div>
+            </section>
+        </div>
+
+        <!-- SOL Section -->
+        <div class="asset-section sol-section">
+            <!-- SOL Performance Metrics -->
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-label">SOL Accumulated</div>
+                    <div class="metric-value" id="solAccumulated">+0.0000</div>
+                    <div class="metric-change" style="color: var(--success);">
+                        <span>↑</span>
+                        <span>Above target</span>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Success Rate</div>
+                    <div class="metric-value" id="solSuccessRate">0.0%</div>
+                    <div class="metric-change" style="color: var(--text-secondary);">
+                        <span>→</span>
+                        <span id="solTradeCount">0 trades</span>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Current Exposure</div>
+                    <div class="metric-value" id="solExposure">$0</div>
+                    <div class="metric-change" style="color: var(--warning);">
+                        <span>→</span>
+                        <span id="solExposurePct">0% of allocation</span>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Active Positions</div>
+                    <div class="metric-value" id="solPositionCount">0</div>
+                    <div class="metric-change" style="color: var(--text-secondary);">
+                        <span>→</span>
+                        <span id="solMaxPositions">Max: 4</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SOL Positions -->
+            <section class="section">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        SOL Positions
+                        <span class="badge sol-badge" id="solPositionBadge">0</span>
+                    </h2>
+                    <div class="status-pill status-active">
+                        <div class="loading"></div>
+                        <span>Auto-updating</span>
+                    </div>
+                </div>
+
+                <div class="positions-grid" id="solPositionsGrid">
+                    <!-- SOL positions will be inserted here -->
+                </div>
+            </section>
+
+            <!-- SOL Technical Indicators -->
+            <section class="section">
+                <div class="section-header">
+                    <h2 class="section-title">SOL Technical Indicators</h2>
+                </div>
+
+                <div class="indicators-grid" id="solIndicators">
+                    <!-- SOL indicators will be inserted here -->
+                </div>
+            </section>
+        </div>
+
+        <!-- Settings Section -->
+        <div class="asset-section settings-section">
+            <section class="section">
+                <div class="section-header">
+                    <h2 class="section-title">Bot Configuration</h2>
+                    <div style="display: flex; gap: 1rem;">
+                        <select id="presetSelector" onchange="loadPreset()" style="padding: 0.5rem 1rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; color: var(--text-primary); cursor: pointer;">
+                            <option value="">Custom Settings</option>
+                            <option value="conservative">Conservative</option>
+                            <option value="balanced">Balanced</option>
+                            <option value="aggressive">Aggressive</option>
+                            <option value="ultra">Ultra Aggressive</option>
+                        </select>
+                        <button onclick="saveSettings()" style="padding: 0.75rem 1.5rem; background: var(--success); border: none; border-radius: 8px; color: white; cursor: pointer; font-weight: 600;">
+                            Save Settings
+                        </button>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                    <!-- BTC Settings -->
+                    <div class="indicator-card">
+                        <h3 style="margin-bottom: 1.5rem; color: var(--btc-color);">Bitcoin Settings</h3>
+                        
+                        <div class="setting-group">
+                            <label>Max Concurrent Positions</label>
+                            <input type="number" id="btc_max_concurrent_stacks" min="1" max="10" step="1">
+                        </div>
+                        
+                        <div class="setting-group">
+                            <label>Max Stack Entries</label>
+                            <input type="number" id="btc_max_stack_entries" min="1" max="15" step="1">
+                        </div>
+                        
+                        <div class="setting-group">
+                            <label>Initial Position Size ($)</label>
+                            <input type="number" id="btc_initial_position_usd" min="10" max="100" step="5">
+                        </div>
+                        
+                        <div class="setting-group">
+                            <label>Stack Entry Size ($)</label>
+                            <input type="number" id="btc_stack_entry_usd" min="10" max="100" step="5">
+                        </div>
+                        
+                        <div class="setting-group">
+                            <label>Stack Spacing (%)</label>
+                            <input type="number" id="btc_stack_spacing_pct" min="0.1" max="5" step="0.1">
+                        </div>
+                        
+                        <h4 style="margin-top: 1rem; margin-bottom: 0.5rem;">Profit Levels</h4>
+                        
+                        <div class="setting-group">
+                            <label>Level 1 (%)</label>
+                            <input type="number" id="btc_profit_level_1_pct" min="0.5" max="5" step="0.1">
+                        </div>
+                        
+                        <div class="setting-group">
+                            <label>Level 2 (%)</label>
+                            <input type="number" id="btc_profit_level_2_pct" min="1" max="10" step="0.1">
+                        </div>
+                        
+                        <div class="setting-group">
+                            <label>Level 3 (%)</label>
+                            <input type="number" id="btc_profit_level_3_pct" min="2" max="15" step="0.1">
+                        </div>
+                        
+                        <div class="setting-group">
+                            <label>Enable Stop Loss</label>
+                            <input type="checkbox" id="btc_stop_loss_enabled">
+                        </div>
+                        
+                        <div class="setting-group">
+                            <label>Stop Loss (%)</label>
+                            <input type="number" id="btc_stop_loss_pct" min="1" max="20" step="0.5">
+                        </div>
+                    </div>
+                    
+                    <!-- SOL Settings -->
+                    <div class="indicator-card">
+                        <h3 style="margin-bottom: 1.5rem; color: var(--sol-color);">Solana Settings</h3>
+                        
+                        <div class="setting-group">
+                            <label>Max Concurrent Positions</label>
+                            <input type="number" id="sol_max_concurrent_stacks" min="1" max="10" step="1">
+                        </div>
+                        
+                        <div class="setting-group">
+                            <label>Max Stack Entries</label>
+                            <input type="number" id="sol_max_stack_entries" min="1" max="15" step="1">
+                        </div>
+                        
+                        <div class="setting-group">
+                            <label>Initial Position Size ($)</label>
+                            <input type="number" id="sol_initial_position_usd" min="5" max="50" step="5">
+                        </div>
+                        
+                        <div class="setting-group">
+                            <label>Stack Entry Size ($)</label>
+                            <input type="number" id="sol_stack_entry_usd" min="5" max="50" step="5">
+                        </div>
+                        
+                        <div class="setting-group">
+                            <label>Stack Spacing (%)</label>
+                            <input type="number" id="sol_stack_spacing_pct" min="0.1" max="5" step="0.1">
+                        </div>
+                        
+                        <h4 style="margin-top: 1rem; margin-bottom: 0.5rem;">Profit Levels</h4>
+                        
+                        <div class="setting-group">
+                            <label>Level 1 (%)</label>
+                            <input type="number" id="sol_profit_level_1_pct" min="0.5" max="5" step="0.1">
+                        </div>
+                        
+                        <div class="setting-group">
+                            <label>Level 2 (%)</label>
+                            <input type="number" id="sol_profit_level_2_pct" min="1" max="10" step="0.1">
+                        </div>
+                        
+                        <div class="setting-group">
+                            <label>Level 3 (%)</label>
+                            <input type="number" id="sol_profit_level_3_pct" min="2" max="15" step="0.1">
+                        </div>
+                        
+                        <div class="setting-group">
+                            <label>Stop Loss (%) - Always Enabled</label>
+                            <input type="number" id="sol_stop_loss_pct" min="1" max="10" step="0.5">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- General Settings -->
+                <div class="indicator-card" style="margin-top: 2rem;">
+                    <h3 style="margin-bottom: 1.5rem;">General Settings</h3>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+                        <div class="setting-group">
+                            <label>Min Signal Confidence (%)</label>
+                            <input type="number" id="min_signal_confidence" min="10" max="90" step="5">
+                        </div>
+                        
+                        <div class="setting-group">
+                            <label>Min Confirmations</label>
+                            <input type="number" id="min_confirmations" min="1" max="10" step="1">
+                        </div>
+                        
+                        <div class="setting-group">
+                            <label>Daily Loss Limit ($)</label>
+                            <input type="number" id="daily_loss_limit_usd" min="10" max="500" step="10">
+                        </div>
+                        
+                        <div class="setting-group">
+                            <label>Max Consecutive Losses</label>
+                            <input type="number" id="max_consecutive_losses" min="1" max="10" step="1">
+                        </div>
+                        
+                        <div class="setting-group">
+                            <label>Update Frequency (seconds)</label>
+                            <input type="number" id="update_frequency_seconds" min="1" max="10" step="1">
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="settingsMessage" style="margin-top: 2rem; padding: 1rem; border-radius: 8px; display: none;"></div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        // Asset switching
+        function switchAsset(asset) {
+            // Update tabs
+            document.querySelectorAll('.asset-tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelector(`.${asset}-tab`).classList.add('active');
+            
+            // Update sections
+            document.querySelectorAll('.asset-section').forEach(section => section.classList.remove('active'));
+            document.querySelector(`.${asset}-section`).classList.add('active');
+            
+            // Load settings when switching to settings tab
+            if (asset === 'settings') {
+                loadSettings();
+            }
+        }
+
+        function loadPreset() {
+            const preset = document.getElementById('presetSelector').value;
+            if (!preset) return;
+            
+            const presets = {
+                conservative: {
+                    btc: {
+                        max_concurrent_stacks: 2,
+                        max_stack_entries: 4,
+                        initial_position_usd: 20,
+                        stack_entry_usd: 15,
+                        stack_spacing_pct: 1.5,
+                        profit_level_1_pct: 2.0,
+                        profit_level_2_pct: 3.5,
+                        profit_level_3_pct: 5.0
+                    },
+                    sol: {
+                        max_concurrent_stacks: 2,
+                        max_stack_entries: 3,
+                        initial_position_usd: 10,
+                        stack_entry_usd: 8,
+                        stack_spacing_pct: 1.2,
+                        profit_level_1_pct: 1.5,
+                        profit_level_2_pct: 2.5,
+                        profit_level_3_pct: 4.0,
+                        stop_loss_pct: 5.0
+                    },
+                    general: {
+                        min_signal_confidence: 70,
+                        min_confirmations: 4,
+                        update_frequency_seconds: 3
+                    }
+                },
+                balanced: {
+                    btc: {
+                        max_concurrent_stacks: 3,
+                        max_stack_entries: 6,
+                        initial_position_usd: 25,
+                        stack_entry_usd: 20,
+                        stack_spacing_pct: 1.2,
+                        profit_level_1_pct: 1.5,
+                        profit_level_2_pct: 2.5,
+                        profit_level_3_pct: 4.0
+                    },
+                    sol: {
+                        max_concurrent_stacks: 3,
+                        max_stack_entries: 5,
+                        initial_position_usd: 15,
+                        stack_entry_usd: 12,
+                        stack_spacing_pct: 1.0,
+                        profit_level_1_pct: 1.0,
+                        profit_level_2_pct: 2.0,
+                        profit_level_3_pct: 3.5,
+                        stop_loss_pct: 3.0
+                    },
+                    general: {
+                        min_signal_confidence: 60,
+                        min_confirmations: 3,
+                        update_frequency_seconds: 2
+                    }
+                },
+                aggressive: {
+                    btc: {
+                        max_concurrent_stacks: 5,
+                        max_stack_entries: 8,
+                        initial_position_usd: 25,
+                        stack_entry_usd: 20,
+                        stack_spacing_pct: 0.8,
+                        profit_level_1_pct: 1.5,
+                        profit_level_2_pct: 2.5,
+                        profit_level_3_pct: 4.0
+                    },
+                    sol: {
+                        max_concurrent_stacks: 4,
+                        max_stack_entries: 6,
+                        initial_position_usd: 15,
+                        stack_entry_usd: 12,
+                        stack_spacing_pct: 0.7,
+                        profit_level_1_pct: 1.0,
+                        profit_level_2_pct: 2.0,
+                        profit_level_3_pct: 3.5,
+                        stop_loss_pct: 3.0
+                    },
+                    general: {
+                        min_signal_confidence: 50,
+                        min_confirmations: 2,
+                        update_frequency_seconds: 1
+                    }
+                },
+                ultra: {
+                    btc: {
+                        max_concurrent_stacks: 8,
+                        max_stack_entries: 10,
+                        initial_position_usd: 30,
+                        stack_entry_usd: 25,
+                        stack_spacing_pct: 0.5,
+                        profit_level_1_pct: 1.0,
+                        profit_level_2_pct: 2.0,
+                        profit_level_3_pct: 3.5
+                    },
+                    sol: {
+                        max_concurrent_stacks: 6,
+                        max_stack_entries: 8,
+                        initial_position_usd: 20,
+                        stack_entry_usd: 15,
+                        stack_spacing_pct: 0.5,
+                        profit_level_1_pct: 0.8,
+                        profit_level_2_pct: 1.5,
+                        profit_level_3_pct: 3.0,
+                        stop_loss_pct: 2.5
+                    },
+                    general: {
+                        min_signal_confidence: 40,
+                        min_confirmations: 2,
+                        update_frequency_seconds: 1
+                    }
+                }
+            };
+            
+            const selectedPreset = presets[preset];
+            if (!selectedPreset) return;
+            
+            // Apply BTC settings
+            document.getElementById('btc_max_concurrent_stacks').value = selectedPreset.btc.max_concurrent_stacks;
+            document.getElementById('btc_max_stack_entries').value = selectedPreset.btc.max_stack_entries;
+            document.getElementById('btc_initial_position_usd').value = selectedPreset.btc.initial_position_usd;
+            document.getElementById('btc_stack_entry_usd').value = selectedPreset.btc.stack_entry_usd;
+            document.getElementById('btc_stack_spacing_pct').value = selectedPreset.btc.stack_spacing_pct;
+            document.getElementById('btc_profit_level_1_pct').value = selectedPreset.btc.profit_level_1_pct;
+            document.getElementById('btc_profit_level_2_pct').value = selectedPreset.btc.profit_level_2_pct;
+            document.getElementById('btc_profit_level_3_pct').value = selectedPreset.btc.profit_level_3_pct;
+            
+            // Apply SOL settings
+            document.getElementById('sol_max_concurrent_stacks').value = selectedPreset.sol.max_concurrent_stacks;
+            document.getElementById('sol_max_stack_entries').value = selectedPreset.sol.max_stack_entries;
+            document.getElementById('sol_initial_position_usd').value = selectedPreset.sol.initial_position_usd;
+            document.getElementById('sol_stack_entry_usd').value = selectedPreset.sol.stack_entry_usd;
+            document.getElementById('sol_stack_spacing_pct').value = selectedPreset.sol.stack_spacing_pct;
+            document.getElementById('sol_profit_level_1_pct').value = selectedPreset.sol.profit_level_1_pct;
+            document.getElementById('sol_profit_level_2_pct').value = selectedPreset.sol.profit_level_2_pct;
+            document.getElementById('sol_profit_level_3_pct').value = selectedPreset.sol.profit_level_3_pct;
+            document.getElementById('sol_stop_loss_pct').value = selectedPreset.sol.stop_loss_pct;
+            
+            // Apply general settings
+            document.getElementById('min_signal_confidence').value = selectedPreset.general.min_signal_confidence;
+            document.getElementById('min_confirmations').value = selectedPreset.general.min_confirmations;
+            document.getElementById('update_frequency_seconds').value = selectedPreset.general.update_frequency_seconds;
+            
+            showSettingsMessage(`Loaded ${preset} preset. Click Save to apply.`, 'success');
+        }
+
+        // Settings Management
+        async function loadSettings() {
+            try {
+                const response = await fetch('http://localhost:5000/api/settings');
+                if (!response.ok) throw new Error('Failed to load settings');
+                
+                const settings = await response.json();
+                
+                // BTC Settings
+                document.getElementById('btc_max_concurrent_stacks').value = settings.btc.max_concurrent_stacks;
+                document.getElementById('btc_max_stack_entries').value = settings.btc.max_stack_entries;
+                document.getElementById('btc_initial_position_usd').value = settings.btc.initial_position_usd;
+                document.getElementById('btc_stack_entry_usd').value = settings.btc.stack_entry_usd;
+                document.getElementById('btc_stack_spacing_pct').value = settings.btc.stack_spacing_pct;
+                document.getElementById('btc_profit_level_1_pct').value = settings.btc.profit_level_1_pct;
+                document.getElementById('btc_profit_level_2_pct').value = settings.btc.profit_level_2_pct;
+                document.getElementById('btc_profit_level_3_pct').value = settings.btc.profit_level_3_pct;
+                document.getElementById('btc_stop_loss_enabled').checked = settings.btc.stop_loss_enabled;
+                document.getElementById('btc_stop_loss_pct').value = settings.btc.stop_loss_pct;
+                
+                // SOL Settings
+                document.getElementById('sol_max_concurrent_stacks').value = settings.sol.max_concurrent_stacks;
+                document.getElementById('sol_max_stack_entries').value = settings.sol.max_stack_entries;
+                document.getElementById('sol_initial_position_usd').value = settings.sol.initial_position_usd;
+                document.getElementById('sol_stack_entry_usd').value = settings.sol.stack_entry_usd;
+                document.getElementById('sol_stack_spacing_pct').value = settings.sol.stack_spacing_pct;
+                document.getElementById('sol_profit_level_1_pct').value = settings.sol.profit_level_1_pct;
+                document.getElementById('sol_profit_level_2_pct').value = settings.sol.profit_level_2_pct;
+                document.getElementById('sol_profit_level_3_pct').value = settings.sol.profit_level_3_pct;
+                document.getElementById('sol_stop_loss_pct').value = settings.sol.stop_loss_pct;
+                
+                // General Settings
+                document.getElementById('min_signal_confidence').value = settings.general.min_signal_confidence;
+                document.getElementById('min_confirmations').value = settings.general.min_confirmations;
+                document.getElementById('daily_loss_limit_usd').value = settings.general.daily_loss_limit_usd;
+                document.getElementById('max_consecutive_losses').value = settings.general.max_consecutive_losses;
+                document.getElementById('update_frequency_seconds').value = settings.general.update_frequency_seconds;
+                
+            } catch (error) {
+                console.error('Error loading settings:', error);
+                showSettingsMessage('Failed to load settings', 'error');
+            }
+        }
+
+        async function saveSettings() {
+            try {
+                const settings = {
+                    btc: {
+                        max_concurrent_stacks: parseInt(document.getElementById('btc_max_concurrent_stacks').value),
+                        max_stack_entries: parseInt(document.getElementById('btc_max_stack_entries').value),
+                        initial_position_usd: parseFloat(document.getElementById('btc_initial_position_usd').value),
+                        stack_entry_usd: parseFloat(document.getElementById('btc_stack_entry_usd').value),
+                        stack_spacing_pct: parseFloat(document.getElementById('btc_stack_spacing_pct').value),
+                        profit_level_1_pct: parseFloat(document.getElementById('btc_profit_level_1_pct').value),
+                        profit_level_2_pct: parseFloat(document.getElementById('btc_profit_level_2_pct').value),
+                        profit_level_3_pct: parseFloat(document.getElementById('btc_profit_level_3_pct').value),
+                        stop_loss_enabled: document.getElementById('btc_stop_loss_enabled').checked,
+                        stop_loss_pct: parseFloat(document.getElementById('btc_stop_loss_pct').value)
+                    },
+                    sol: {
+                        max_concurrent_stacks: parseInt(document.getElementById('sol_max_concurrent_stacks').value),
+                        max_stack_entries: parseInt(document.getElementById('sol_max_stack_entries').value),
+                        initial_position_usd: parseFloat(document.getElementById('sol_initial_position_usd').value),
+                        stack_entry_usd: parseFloat(document.getElementById('sol_stack_entry_usd').value),
+                        stack_spacing_pct: parseFloat(document.getElementById('sol_stack_spacing_pct').value),
+                        profit_level_1_pct: parseFloat(document.getElementById('sol_profit_level_1_pct').value),
+                        profit_level_2_pct: parseFloat(document.getElementById('sol_profit_level_2_pct').value),
+                        profit_level_3_pct: parseFloat(document.getElementById('sol_profit_level_3_pct').value),
+                        stop_loss_pct: parseFloat(document.getElementById('sol_stop_loss_pct').value)
+                    },
+                    general: {
+                        min_signal_confidence: parseFloat(document.getElementById('min_signal_confidence').value),
+                        min_confirmations: parseInt(document.getElementById('min_confirmations').value),
+                        daily_loss_limit_usd: parseFloat(document.getElementById('daily_loss_limit_usd').value),
+                        max_consecutive_losses: parseInt(document.getElementById('max_consecutive_losses').value),
+                        update_frequency_seconds: parseInt(document.getElementById('update_frequency_seconds').value)
+                    }
+                };
+                
+                const response = await fetch('http://localhost:5000/api/settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(settings)
+                });
+                
+                if (!response.ok) throw new Error('Failed to save settings');
+                
+                const result = await response.json();
+                showSettingsMessage('Settings saved successfully!', 'success');
+                
+                // Reload settings to confirm they were saved
+                setTimeout(() => loadSettings(), 1000);
+                
+            } catch (error) {
+                console.error('Error saving settings:', error);
+                showSettingsMessage('Failed to save settings', 'error');
+            }
+        }
+
+        function showSettingsMessage(message, type) {
+            const messageEl = document.getElementById('settingsMessage');
+            messageEl.textContent = message;
+            messageEl.className = type;
+            messageEl.style.display = 'block';
+            
+            setTimeout(() => {
+                messageEl.style.display = 'none';
+            }, 3000);
+        }
+
+        // Real-time dashboard
+        class MultiAssetDashboard {
+            constructor() {
+                this.apiUrl = 'http://localhost:5000/api';
+                this.positions = [];
+                this.metrics = null;
+                this.btcIndicators = null;
+                this.solIndicators = null;
+                this.connectionError = false;
+                this.init();
+            }
+
+            init() {
+                // Start real-time updates
+                this.updateAll();
+                
+                // Set update intervals
+                setInterval(() => this.updateMetrics(), 2000);
+                setInterval(() => this.updatePositions(), 3000);
+                setInterval(() => this.updateIndicators(), 5000);
+            }
+
+            async fetchData(endpoint) {
+                console.log(`Fetching ${endpoint}...`);
+                try {
+                    const response = await fetch(`${this.apiUrl}${endpoint}`);
+                    console.log(`Response status: ${response.status}`);
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    const data = await response.json();
+                    console.log(`Data received:`, data);
+                    
+                    if (this.connectionError) {
+                        this.connectionError = false;
+                        this.showConnectionStatus(true);
+                    }
+                    
+                    return data;
+                } catch (error) {
+                    console.error(`Error fetching ${endpoint}:`, error);
+                    
+                    if (!this.connectionError) {
+                        this.connectionError = true;
+                        this.showConnectionStatus(false);
+                    }
+                    
+                    return null;
+                }
+            }
+
+            async updateAll() {
+                console.log('Manual refresh triggered');
+                // Flash the refresh buttons to show update is happening
+                const buttons = document.querySelectorAll('button');
+                buttons.forEach(btn => {
+                    if (btn.textContent.includes('Refresh')) {
+                        btn.style.opacity = '0.5';
+                        setTimeout(() => btn.style.opacity = '1', 500);
+                    }
+                });
+                
+                await this.updateMetrics();
+                await this.updatePositions();
+                await this.updateIndicators();
+            }
+
+            async updateMetrics() {
+                const data = await this.fetchData('/metrics');
+                if (!data) return;
+
+                this.metrics = data;
+                
+                // Update prices
+                document.getElementById('btcPrice').textContent = `$${data.btc.price.toLocaleString('en-US', {maximumFractionDigits: 0})}`;
+                document.getElementById('solPrice').textContent = `$${data.sol.price.toFixed(2)}`;
+                
+                // Update price changes
+                this.updatePriceChange('btcChange', data.btc.price_change_24h);
+                this.updatePriceChange('solChange', data.sol.price_change_24h);
+                
+                // Update overall stats
+                document.getElementById('totalTrades').textContent = data.overall.total_trades;
+                this.updatePnL('dailyPnl', data.overall.daily_pnl);
+                document.getElementById('usdBalance').textContent = `$${data.overall.usd_balance.toFixed(2)}`;
+                document.getElementById('runtime').textContent = data.overall.runtime;
+                
+                // Update BTC metrics
+                document.getElementById('btcAccumulated').textContent = `+${data.btc.accumulated.toFixed(6)}`;
+                document.getElementById('btcSuccessRate').textContent = `${data.btc.accumulation_rate.toFixed(1)}%`;
+                document.getElementById('btcExposure').textContent = `${data.btc.exposure.toFixed(0)}`;
+                document.getElementById('btcExposurePct').textContent = `${(data.btc.exposure / data.btc.allocated_capital * 100).toFixed(0)}% of allocation`;
+                document.getElementById('btcPositionCount').textContent = data.btc.active_positions;
+                document.getElementById('btcPositionBadge').textContent = data.btc.active_positions;
+                document.getElementById('btcTradeCount').textContent = `${data.btc.total_trades} trades`;
+                
+                // Update SOL metrics
+                document.getElementById('solAccumulated').textContent = `+${data.sol.accumulated.toFixed(4)}`;
+                document.getElementById('solSuccessRate').textContent = `${data.sol.accumulation_rate.toFixed(1)}%`;
+                document.getElementById('solExposure').textContent = `$${data.sol.exposure.toFixed(0)}`;
+                document.getElementById('solExposurePct').textContent = `${(data.sol.exposure / data.sol.allocated_capital * 100).toFixed(0)}% of allocation`;
+                document.getElementById('solPositionCount').textContent = data.sol.active_positions;
+                document.getElementById('solPositionBadge').textContent = data.sol.active_positions;
+                document.getElementById('solTradeCount').textContent = `${data.sol.total_trades} trades`;
+            }
+
+            async updatePositions() {
+                console.log('Updating positions...');
+                const positions = await this.fetchData('/positions');
+                if (!positions) {
+                    console.log('No positions data received');
+                    return;
+                }
+
+                this.positions = positions;
+                console.log(`Total positions: ${positions.length}`);
+                
+                // Separate by asset
+                const btcPositions = positions.filter(p => p.asset === 'BTC');
+                const solPositions = positions.filter(p => p.asset === 'SOL');
+                
+                console.log(`BTC positions: ${btcPositions.length}, SOL positions: ${solPositions.length}`);
+                
+                // Update grids
+                this.updatePositionGrid('btcPositionsGrid', btcPositions, 'btc');
+                this.updatePositionGrid('solPositionsGrid', solPositions, 'sol');
+            }
+
+            async updateIndicators() {
+                // Update BTC indicators
+                const btcData = await this.fetchData('/indicators/BTC');
+                if (btcData) {
+                    this.btcIndicators = btcData;
+                    this.updateIndicatorCards('btcIndicators', btcData, 'btc');
+                }
+                
+                // Update SOL indicators
+                const solData = await this.fetchData('/indicators/SOL');
+                if (solData) {
+                    this.solIndicators = solData;
+                    this.updateIndicatorCards('solIndicators', solData, 'sol');
+                }
+            }
+
+            updatePositionGrid(gridId, positions, assetClass) {
+                const grid = document.getElementById(gridId);
+                grid.innerHTML = '';
+                
+                if (positions.length === 0) {
+                    grid.innerHTML = '<div style="text-align: center; color: var(--text-secondary); padding: 3rem;">No active positions</div>';
+                    return;
+                }
+                
+                positions.forEach(pos => {
+                    const card = this.createPositionCard(pos, assetClass);
+                    grid.appendChild(card);
+                });
+            }
+
+            createPositionCard(pos, assetClass) {
+                const card = document.createElement('div');
+                card.className = `position-card ${assetClass}-position`;
+                
+                const pnlClass = pos.unrealized_pnl >= 0 ? 'success' : 'danger';
+                const pnlSign = pos.unrealized_pnl >= 0 ? '+' : '';
+                
+                const profitLevels = assetClass === 'btc' 
+                    ? ['1.5%', '2.5%', '4.0%']
+                    : ['1.0%', '2.0%', '3.5%'];
+                
+                card.innerHTML = `
+                    <div class="position-header">
+                        <div>
+                            <div class="position-id">${pos.id}</div>
+                            <div style="color: var(--text-secondary); font-size: 0.85rem;">Started ${pos.duration_minutes} min ago</div>
+                        </div>
+                        <div class="status-pill status-active">
+                            Active
+                        </div>
+                    </div>
+
+                    <div class="position-metrics">
+                        <div class="position-metric">
+                            <div style="font-size: 0.8rem; color: var(--text-secondary);">Avg Cost</div>
+                            <div style="font-size: 1.2rem; font-weight: 600;">$${pos.average_cost.toLocaleString()}</div>
+                        </div>
+                        <div class="position-metric">
+                            <div style="font-size: 0.8rem; color: var(--text-secondary);">${pos.asset} Amount</div>
+                            <div style="font-size: 1.2rem; font-weight: 600;">${pos.total_amount.toFixed(pos.asset === 'BTC' ? 6 : 4)}</div>
+                        </div>
+                        <div class="position-metric">
+                            <div style="font-size: 0.8rem; color: var(--text-secondary);">Entries</div>
+                            <div style="font-size: 1.2rem; font-weight: 600;">${pos.entries}/${pos.max_entries}</div>
+                        </div>
+                        <div class="position-metric">
+                            <div style="font-size: 0.8rem; color: var(--text-secondary);">P&L</div>
+                            <div style="font-size: 1.2rem; font-weight: 600; color: var(--${pnlClass});">
+                                ${pnlSign}$${Math.abs(pos.unrealized_pnl).toFixed(2)} (${pnlSign}${pos.unrealized_pnl_pct.toFixed(1)}%)
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="profit-progress">
+                        <div class="progress-label">Profit Level Progress (${pos.profit_levels_hit.length}/3)</div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${pos.progress_pct}%"></div>
+                            <div class="progress-markers">
+                                <div class="progress-marker"></div>
+                                <div class="progress-marker"></div>
+                                <div class="progress-marker"></div>
+                            </div>
+                        </div>
+                        <div class="profit-levels">
+                            <div class="profit-level ${pos.profit_levels_hit.includes('level_1') ? 'hit' : ''}">
+                                ${profitLevels[0]} - $${pos.profit_targets.level_1.toLocaleString()}
+                            </div>
+                            <div class="profit-level ${pos.profit_levels_hit.includes('level_2') ? 'hit' : ''}">
+                                ${profitLevels[1]} - $${pos.profit_targets.level_2.toLocaleString()}
+                            </div>
+                            <div class="profit-level ${pos.profit_levels_hit.includes('level_3') ? 'hit' : ''}">
+                                ${profitLevels[2]} - $${pos.profit_targets.level_3.toLocaleString()}
+                            </div>
+                        </div>
+                    </div>
+                    ${pos.stop_loss_enabled ? `
+                        <div class="stop-loss-indicator">
+                            <span>⚠️</span>
+                            <span>Stop Loss: $${pos.stop_loss_price.toFixed(2)}</span>
+                        </div>
+                    ` : ''}
+                `;
+                
+                return card;
+            }
+
+            updateIndicatorCards(containerId, data, assetClass) {
+                const container = document.getElementById(containerId);
+                container.innerHTML = '';
+                
+                // RSI Card
+                const rsiCard = document.createElement('div');
+                rsiCard.className = 'indicator-card';
+                rsiCard.innerHTML = `
+                    <div class="metric-label">RSI (14)</div>
+                    <div class="indicator-value">${data.rsi.value.toFixed(1)}</div>
+                    <div class="indicator-bar">
+                        <div class="indicator-fill" style="width: ${data.rsi.value}%"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; font-size: 0.8rem; color: var(--text-secondary);">
+                        <span>Oversold (30)</span>
+                        <span>Overbought (70)</span>
+                    </div>
+                `;
+                
+                // Bollinger Bands Card
+                const bbCard = document.createElement('div');
+                bbCard.className = 'indicator-card';
+                bbCard.innerHTML = `
+                    <div class="metric-label">Bollinger Band Position</div>
+                    <div class="indicator-value">${
+                        data.bollinger_bands.position < 20 ? 'Near Lower Band' :
+                        data.bollinger_bands.position > 80 ? 'Near Upper Band' : 'Middle Range'
+                    }</div>
+                    <div style="margin-top: 1rem; display: flex; justify-content: space-between; font-size: 0.85rem;">
+                        <div>
+                            <div style="color: var(--text-secondary);">Upper</div>
+                            <div style="font-weight: 600;">$${data.bollinger_bands.upper.toLocaleString()}</div>
+                        </div>
+                        <div>
+                            <div style="color: var(--text-secondary);">Middle</div>
+                            <div style="font-weight: 600;">$${data.bollinger_bands.middle.toLocaleString()}</div>
+                        </div>
+                        <div>
+                            <div style="color: var(--text-secondary);">Lower</div>
+                            <div style="font-weight: 600;">$${data.bollinger_bands.lower.toLocaleString()}</div>
+                        </div>
+                    </div>
+                `;
+                
+                // Signals Card
+                const signalsCard = document.createElement('div');
+                signalsCard.className = 'indicator-card';
+                signalsCard.innerHTML = `
+                    <div class="metric-label">Current Signals (${data.current_signals.action.toUpperCase()})</div>
+                    <div style="margin-top: 1rem;">
+                        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                            ${data.current_signals.confirmations.map(signal => 
+                                `<div class="status-pill status-active">${signal}</div>`
+                            ).join('')}
+                        </div>
+                    </div>
+                `;
+                
+                container.appendChild(rsiCard);
+                container.appendChild(bbCard);
+                container.appendChild(signalsCard);
+            }
+
+            updatePriceChange(elementId, change) {
+                const element = document.getElementById(elementId);
+                element.textContent = `${change > 0 ? '+' : ''}${change.toFixed(2)}%`;
+                element.className = `price-change ${change >= 0 ? 'price-up' : 'price-down'}`;
+            }
+
+            updatePnL(elementId, value) {
+                const element = document.getElementById(elementId);
+                element.textContent = `${value >= 0 ? '+' : ''}$${Math.abs(value).toFixed(2)}`;
+                element.style.color = value >= 0 ? 'var(--success)' : 'var(--danger)';
+            }
+
+            showConnectionStatus(connected) {
+                const statusPills = document.querySelectorAll('.status-pill');
+                statusPills.forEach(pill => {
+                    if (connected) {
+                        pill.className = 'status-pill status-active';
+                        pill.innerHTML = '<div class="loading"></div><span>Auto-updating</span>';
+                    } else {
+                        pill.className = 'status-pill status-pending';
+                        pill.innerHTML = '<span>⚠️ Connection Lost</span>';
+                    }
+                });
+            }
+        }
+
+        // Initialize dashboard
+        const dashboard = new MultiAssetDashboard();
+        window.dashboard = dashboard; // Make it globally accessible for debugging
+    </script>
+</body>
+</html>

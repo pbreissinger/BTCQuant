@@ -1,0 +1,19 @@
+# Core Data Processing
+pandas==2.1.4
+numpy==1.24.3
+
+# HTTP Requests  
+requests==2.31.0
+
+# Technical Analysis (no TA-Lib dependency issues)
+ta==0.10.2
+
+# Web Framework
+Flask==2.3.3
+Flask-Cors==4.0.0
+
+# Environment Management
+python-dotenv==1.0.0
+
+# Installation command:
+# pip install --user pandas==2.1.4 numpy==1.24.3 requests==2.31.0 ta==0.10.2 Flask==2.3.3 Flask-Cors==4.0.0 python-dotenv==1.0.0
