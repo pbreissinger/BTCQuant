@@ -68,6 +68,3 @@ cd multi-asset-trading-bot
 
 # Install dependencies
 pip install -r requirements.txt
-
-# Copy environment template
-cp .env.example .env
