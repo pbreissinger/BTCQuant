@@ -63,7 +63,7 @@ A sophisticated cryptocurrency trading bot that simultaneously trades Bitcoin (B
 
 ```bash
 # Clone the repository
-git clone <your-repo-url>
+git clone https://github.com/pbreissinger/BTCQuant.git
 cd multi-asset-trading-bot
 
 # Install dependencies
